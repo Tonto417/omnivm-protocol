@@ -1,0 +1,44 @@
+{
+  "name": "omnivm-protocol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LayerZero V2 Omnichain Execution Environment (EIP-1153 + EIP-712 Relayer & Intent Solver)",
+  "scripts": {
+    "dev": "next dev",
+    "build:web": "next build",
+    "build:contracts": "forge build",
+    "test:contracts": "forge test -vvv",
+    "test:solver": "forge build && vitest run test/solver.test.ts",
+    "test:all": "forge test -vvv && vitest run",
+    "relayer": "tsx src/relayer.ts",
+    "deploy:sepolia": "forge script script/DeployOmniVM.s.sol:DeployOmniVM --rpc-url $SEPOLIA_RPC_URL --broadcast --verify -vvv",
+    "deploy:arb-sepolia": "forge script script/DeployOmniVM.s.sol:DeployOmniVM --rpc-url $ARB_SEPOLIA_RPC_URL --broadcast --verify -vvv",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@layerzerolabs/lz-evm-oapp-v2": "^2.3.39",
+    "@layerzerolabs/lz-evm-protocol-v2": "^2.3.39",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@tanstack/react-query": "^5.62.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "viem": "^2.21.54",
+    "wagmi": "^2.14.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
+    "execa": "^8.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
