@@ -35,7 +35,7 @@ export const SUPPORTED_CHAINS: OmniChainConfig[] = [
     name: "Arbitrum Sepolia",
     shortName: "ARB-SEP",
     endpointV2: "0x6EDCE65403992e310A62460808c4b910D972f10f",
-    omniVmAddress: "0x000000000000000000000000000000000000dEaD" as Address,
+    omniVmAddress: "0x13AA82fEB41Af5f3955b059273E96174cd9392D8" as Address,
     blockExplorerUrl: "https://sepolia.arbiscan.io",
   },
   {
@@ -240,7 +240,7 @@ export const OMNI_VM_ABI = [
       { name: "_deadline", type: "uint256" },
       { name: "_signature", type: "bytes" },
     ],
-    outputs: [],
+    outputs: [{ name: "guid", type: "bytes32" }],
   },
   {
     type: "event",
@@ -264,6 +264,22 @@ export const OMNI_VM_ABI = [
       { name: "instructionCount", type: "uint256", indexed: false },
     ],
   },
+  { type: "error", name: "RestrictedTarget", inputs: [{ name: "target", type: "address" }] },
+  { type: "error", name: "InsufficientPayment", inputs: [{ name: "required", type: "uint256" }, { name: "provided", type: "uint256" }] },
+  { type: "error", name: "InvalidBatchSize", inputs: [{ name: "count", type: "uint256" }, { name: "max", type: "uint256" }] },
+  { type: "error", name: "ValueExceedsUint128", inputs: [{ name: "value", type: "uint256" }] },
+  { type: "error", name: "InsufficientMsgValue", inputs: [{ name: "required", type: "uint256" }, { name: "remaining", type: "uint256" }] },
+  { type: "error", name: "InvalidRefundRecipient", inputs: [] },
+  { type: "error", name: "SignatureExpired", inputs: [{ name: "deadline", type: "uint256" }, { name: "currentTimestamp", type: "uint256" }] },
+  { type: "error", name: "InvalidIntentSignature", inputs: [] },
+  { type: "error", name: "IntentAlreadyFulfilled", inputs: [{ name: "intentId", type: "bytes32" }] },
+  { type: "error", name: "IntentAlreadyExists", inputs: [{ name: "intentId", type: "bytes32" }] },
+  { type: "error", name: "InvalidEndpointId", inputs: [{ name: "expected", type: "uint32" }, { name: "provided", type: "uint32" }] },
+  { type: "error", name: "InvalidEscrowState", inputs: [{ name: "intentId", type: "bytes32" }] },
+  { type: "error", name: "EscrowNotExpired", inputs: [{ name: "deadline", type: "uint256" }, { name: "currentTimestamp", type: "uint256" }] },
+  { type: "error", name: "InsufficientSolverOutput", inputs: [{ name: "received", type: "uint256" }, { name: "required", type: "uint256" }] },
+  { type: "error", name: "TransferFailed", inputs: [] },
+  { type: "error", name: "NoPeer", inputs: [{ name: "eid", type: "uint32" }] },
 ] as const;
 
 export const wagmiConfig = createConfig({
@@ -277,3 +293,4 @@ export const wagmiConfig = createConfig({
     [base.id]: http(),
   },
 });
+

@@ -118,13 +118,18 @@ contract OmniVMTest is Test {
         assertEq(omniVm.xMsgOrigin(), 0);
     }
 
-    function test_RevertOnRestrictedTarget() public {
+    function test_RevertOnRestrictedTargetInDispatchAndQuote() public {
         OmniVM.Instruction[] memory insts = new OmniVM.Instruction[](1);
         insts[0] = OmniVM.Instruction({
             target: address(endpoint),
             value: 0,
             payload: ""
         });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(OmniVM.RestrictedTarget.selector, address(endpoint))
+        );
+        omniVm.quoteBatch(DST_EID, alice, insts, "", false);
 
         vm.prank(alice);
         vm.expectRevert(
@@ -204,3 +209,5 @@ contract OmniVMTest is Test {
         assertEq(omniVm.nonces(alice), 1);
     }
 }
+-	
+	

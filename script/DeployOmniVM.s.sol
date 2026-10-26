@@ -19,6 +19,8 @@ contract DeployOmniVM is Script {
 
         omniVm = new OmniVM{salt: DEPLOY_SALT}(endpoint, deployer);
         console2.log("OmniVM deployed deterministically at:", address(omniVm));
+        console2.log("Deployer / Owner:", deployer);
+        console2.log("LayerZero Endpoint V2:", endpoint);
 
         uint32 remoteEid = uint32(vm.envOr("REMOTE_EID", uint256(0)));
         address remotePeer = vm.envOr("REMOTE_PEER", address(0));
@@ -30,3 +32,5 @@ contract DeployOmniVM is Script {
         vm.stopBroadcast();
     }
 }
+-	
+	

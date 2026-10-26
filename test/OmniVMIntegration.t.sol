@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import { Test } from "forge-std/Test.sol";
 import { OmniVM } from "../src/OmniVM.sol";
 import { MockEndpointV2, ContextEchoTarget } from "./OmniVM.t.sol";
+import { Origin } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockERC20 is ERC20 {
@@ -24,6 +25,7 @@ contract OmniVMIntegrationTest is Test {
     OmniVM internal dstOmniVm;
     MockERC20 internal weth;
     ContextEchoTarget internal hookTarget;
+    ContextEchoTarget internal untrustedRouteTarget;
 
     address internal user = address(0xBEEF);
     address internal solver = address(0xCAFE);
@@ -44,9 +46,10 @@ contract OmniVMIntegrationTest is Test {
         weth = new MockERC20();
         weth.mint(solver, 10 ether);
         hookTarget = new ContextEchoTarget();
+        untrustedRouteTarget = new ContextEchoTarget();
     }
 
-    function test_CrossChainOutcomeFulfillmentAndPostHookContext() public {
+    function test_CrossChainOutcomeFulfillmentAndEscrowSettlement() public {
         OmniVM.OmniOutcomeIntent memory intent = OmniVM.OmniOutcomeIntent({
             sender: user,
             recipient: user,
@@ -66,16 +69,25 @@ contract OmniVMIntegrationTest is Test {
             deadline: block.timestamp + 1800
         });
 
+        // 1. User opens intent on source chain and locks 1.05 ETH in escrow
+        vm.prank(user);
+        bytes32 intentId = srcOmniVm.openOutcomeIntent{value: 1.05 ether}(intent);
+        assertEq(srcOmniVm.totalEscrowedNative(), 1.05 ether);
+
+        // 2. Solver routes WETH transfer (and tries to read xMsgSender on an untrusted route target)
         OmniVM.Instruction[] memory route = new OmniVM.Instruction[](2);
         route[0] = OmniVM.Instruction({
+            target: address(untrustedRouteTarget),
+            value: 0,
+            payload: abi.encodeCall(
+                ContextEchoTarget.executeWithContext,
+                (address(dstOmniVm), 111)
+            )
+        });
+        route[1] = OmniVM.Instruction({
             target: address(weth),
             value: 0,
             payload: abi.encodeCall(weth.transferFrom, (solver, user, 1 ether))
-        });
-        route[1] = OmniVM.Instruction({
-            target: intent.postHookTarget,
-            value: intent.postHookValue,
-            payload: intent.postHookPayload
         });
 
         vm.startPrank(solver);
@@ -89,8 +101,28 @@ contract OmniVMIntegrationTest is Test {
 
         assertTrue(settlementGuid != bytes32(0));
         assertEq(weth.balanceOf(user), 1 ether);
+
+        // Solver route step CANNOT spoof xMsgSender, while postHookTarget receives authenticated context
+        assertEq(untrustedRouteTarget.lastXSender(), address(0));
+        assertEq(untrustedRouteTarget.lastXOrigin(), 0);
         assertEq(hookTarget.lastXSender(), user);
         assertEq(hookTarget.lastXOrigin(), SRC_EID);
         assertEq(hookTarget.recordedValue(), 777);
+
+        // 3. Deliver 64-byte LayerZero settlement payload back to srcOmniVm
+        uint256 solverBalanceBefore = solver.balance;
+        bytes memory settlementMsg = abi.encode(intentId, solver);
+        Origin memory origin = Origin({
+            srcEid: DST_EID,
+            sender: bytes32(uint256(uint160(address(dstOmniVm)))),
+            nonce: 1
+        });
+
+        vm.prank(address(srcEndpoint));
+        srcOmniVm.lzReceive(origin, settlementGuid, settlementMsg, address(this), "");
+
+        assertEq(solver.balance - solverBalanceBefore, 1.05 ether);
+        assertEq(srcOmniVm.totalEscrowedNative(), 0);
     }
 }
+

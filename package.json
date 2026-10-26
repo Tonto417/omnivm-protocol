@@ -11,9 +11,10 @@
     "test:solver": "forge build && vitest run test/solver.test.ts",
     "test:all": "forge test -vvv && vitest run",
     "relayer": "tsx src/relayer.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "forge clean && rm -rf .next out",
     "deploy:sepolia": "forge script script/DeployOmniVM.s.sol:DeployOmniVM --rpc-url $SEPOLIA_RPC_URL --broadcast --verify -vvv",
-    "deploy:arb-sepolia": "forge script script/DeployOmniVM.s.sol:DeployOmniVM --rpc-url $ARB_SEPOLIA_RPC_URL --broadcast --verify -vvv",
-    "typecheck": "tsc --noEmit"
+    "deploy:arb-sepolia": "forge script script/DeployOmniVM.s.sol:DeployOmniVM --rpc-url $ARB_SEPOLIA_RPC_URL --broadcast --verify -vvv"
   },
   "dependencies": {
     "@layerzerolabs/lz-evm-oapp-v2": "^2.3.39",
@@ -42,3 +43,4 @@
     "node": ">=20.0.0"
   }
 }
+
