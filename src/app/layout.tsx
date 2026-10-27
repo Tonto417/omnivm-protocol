@@ -1,4 +1,4 @@
-import type { Metadata } from "import 'tailwindcss/tailwind.css'"; // or standard global import if using globals.css
+import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
