@@ -6,6 +6,7 @@ import {
   encodeAbiParameters,
   hashTypedData,
   pad,
+  isAddress,
   zeroAddress,
 } from "viem";
 import {
@@ -21,7 +22,7 @@ export type SolidityInstruction = {
   target: Address;
   value: bigint;
   payload: Hex;
-}
+};
 
 export type BatchDispatchIntentMessage = {
   sender: Address;
@@ -33,7 +34,7 @@ export type BatchDispatchIntentMessage = {
   options: Hex;
   nonce: bigint;
   deadline: bigint;
-}
+};
 
 export const OMNI_VM_EIP712_TYPES = {
   Instruction: [
@@ -54,12 +55,16 @@ export const OMNI_VM_EIP712_TYPES = {
   ],
 } as const;
 
-export function getOmniVmDomain(chainId: number = 11155111, verifyingContract: Address = "0x13AA82fEB41Af5f3955b059273E96174cd9392D8") {
+export function getOmniVmDomain(
+  chainId: number = 11155111,
+  verifyingContract: Address = "0x13AA82fEB41Af5f3955b059273E96174cd9392D8"
+) {
   return {
     name: "OmniVM",
     version: "1",
     chainId: chainId || 11155111,
-    verifyingContract: verifyingContract || "0x13AA82fEB41Af5f3955b059273E96174cd9392D8",
+    verifyingContract:
+      verifyingContract || "0x13AA82fEB41Af5f3955b059273E96174cd9392D8",
   } as const;
 }
 
@@ -70,20 +75,31 @@ export function assertValidBatchIntent(intent: BatchDispatchIntentMessage): void
       `InvalidBatchSize: count=${len} (must be between 1 and ${MAX_INSTRUCTIONS}).`
     );
   }
-  if (intent.refundRecipient.toLowerCase() === zeroAddress) {
+  if (!isAddress(intent.sender) || intent.sender.toLowerCase() === zeroAddress) {
+    throw new Error("InvalidSender: sender cannot be address(0).");
+  }
+  if (
+    !isAddress(intent.refundRecipient) ||
+    intent.refundRecipient.toLowerCase() === zeroAddress
+  ) {
     throw new Error("InvalidRefundRecipient: refundRecipient cannot be address(0).");
   }
+
   const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
   if (nowSeconds > intent.deadline) {
     throw new Error(
       `SignatureExpired: deadline (${intent.deadline}) < currentTimestamp (${nowSeconds}).`
     );
   }
+  if (intent.deadline > nowSeconds + 2592000n) {
+    throw new Error("SignatureDeadlineTooFarInFuture: max deadline is 30 days.");
+  }
 
   let computedTotal = 0n;
-  for (const inst of intent.instructions) {
-    if (inst.target.toLowerCase() === zeroAddress) {
-      throw new Error("RestrictedTarget: target cannot be address(0).");
+  for (let i = 0; i < intent.instructions.length; i++) {
+    const inst = intent.instructions[i];
+    if (!isAddress(inst.target) || inst.target.toLowerCase() === zeroAddress) {
+      throw new Error(`RestrictedTarget: instruction[${i}] target cannot be address(0).`);
     }
     computedTotal += inst.value;
   }
@@ -95,7 +111,7 @@ export function assertValidBatchIntent(intent: BatchDispatchIntentMessage): void
   }
 
   if (computedTotal > MAX_UINT128) {
-    throw new Error(`ValueExceedsUint128: ${computedTotal}`);
+    throw new Error(`ValueExceedsUint128: ${computedTotal} exceeds uint128 max.`);
   }
 }
 
@@ -221,7 +237,7 @@ export async function quoteOmniVmBatch(params: {
 
     const options =
       baseOptions === "0x"
-        ? buildLzReceiveOptions(200_000n, totalInstValue)
+        ? buildLzReceiveOptions(200_000n, 0n)
         : baseOptions;
 
     let fee: { nativeFee: bigint; lzTokenFee: bigint };
@@ -235,7 +251,7 @@ export async function quoteOmniVmBatch(params: {
             dstEid,
             receiver: pad(dstOmniVmPeer, { size: 32 }),
             message,
-            options: buildLzReceiveOptions(200_000n, 0n),
+            options,
             payInLzToken: false,
           },
           srcOmniVm,
