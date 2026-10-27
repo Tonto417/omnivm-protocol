@@ -240,7 +240,7 @@ export const OMNI_VM_ABI = [
       { name: "_deadline", type: "uint256" },
       { name: "_signature", type: "bytes" },
     ],
-    outputs: [{ name: "guid", type: "bytes32" }],
+    outputs: [],
   },
   {
     type: "event",

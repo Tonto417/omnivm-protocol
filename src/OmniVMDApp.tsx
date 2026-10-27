@@ -74,12 +74,17 @@ export default function OmniVMDApp() {
         transport: http(),
       });
 
-      const currentNonce = await publicClient.readContract({
+      let currentNonce = 0n;
+      try {
+        currentNonce = (await publicClient.readContract({
         address: srcConfig.omniVmAddress,
         abi: OMNI_VM_ABI,
         functionName: "nonces",
         args: [account.address],
-      });
+      })) as bigint;
+      } catch {
+        currentNonce = 0n;
+      }
 
       const domain = {
         name: "OmniVM",
